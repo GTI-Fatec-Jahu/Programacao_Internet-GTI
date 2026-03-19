@@ -2,170 +2,339 @@
 
 > **Disciplina:** Programação para Internet (ILP951)  
 > **Professor:** Ronan Adriel Zenatti  
-> **Esta aula:** Entrega e apresentação do T1 — **2 pontos**  
-> **Pré-requisitos:** Aulas 01 a 07 concluídas — CRUD completo com Flask + MySQL + Bootstrap.
+> **Avaliação:** T1 — **2 pontos**  
+> **Entrega:** Atividade específica no Google Classroom da turma  
+> **Execução:** Individual ou em dupla
 
 ---
 
-## 🗺️ O que acontece nesta aula
+## 🗺️ O que é este trabalho
 
-Esta aula não tem novo conteúdo técnico — ela é dedicada inteiramente à entrega, apresentação e avaliação do Trabalho 1. O T1 consolida tudo que foi desenvolvido nas Aulas 01 a 07: o ambiente configurado, Flask rodando com rotas e templates, Bootstrap responsivo, formulários com validação no servidor, e MySQL com CRUD completo para pelo menos uma entidade. Você vai apresentar o sistema funcionando para o professor, explicar as decisões técnicas tomadas, e entregar o repositório Git com o histórico de commits.
+O T1 é o primeiro projeto avaliado do semestre. Você vai construir a **estrutura completa de um sistema web com Flask**, aplicando tudo que foi aprendido nas Aulas 01 a 07: organização de projeto, rotas, templates com herança Jinja2, Bootstrap, CSS personalizado e navegação funcional entre páginas.
 
----
-
-## Parte 1 — O que será avaliado
-
-O T1 vale **2 pontos** na composição da nota do semestre. A avaliação é dividida em quatro critérios de igual peso, cada um valendo até 0,5 ponto.
-
-### Critério 1 — Funcionalidade (0,5 ponto)
-
-Este critério avalia se o sistema funciona corretamente de ponta a ponta. O avaliador vai testar diretamente no seu navegador: navegar entre as páginas, criar um novo registro, verificar que ele aparece na listagem, editá-lo, verificar que a alteração foi salva, desativá-lo, e verificar que ele desaparece da listagem principal. Qualquer operação que cause erro 500, tela em branco ou comportamento inesperado reduz a nota neste critério.
-
-Para garantir a pontuação máxima, faça o seguinte ciclo de teste antes da entrega: reinicie o servidor Flask (`Ctrl+C` e `python app.py`), abra o navegador em modo anônimo, e percorra o ciclo CRUD completo do zero, como se fosse um usuário que nunca viu o sistema.
-
-### Critério 2 — Código e organização (0,5 ponto)
-
-Este critério avalia a qualidade e organização do código. O avaliador vai verificar: se o projeto tem estrutura de pastas correta (`templates/`, `static/`, `db.py`, `app.py`); se o `db.py` existe e centraliza a conexão; se as queries usam placeholders `%s` em vez de concatenação de strings (risco de SQL Injection); se a validação no servidor está presente em todos os formulários; se os templates herdam do `base.html` com `{% extends %}`; e se os commits no Git têm mensagens descritivas que narram a evolução do projeto.
-
-### Critério 3 — Interface (0,5 ponto)
-
-Este critério avalia a aparência e usabilidade da interface. O avaliador vai verificar: se o Bootstrap está aplicado consistentemente em todas as páginas; se a navbar permite navegar para todas as seções do sistema; se os formulários têm `label` para todos os campos, `placeholder` descritivo, e feedback visual de erro (flash messages); se a listagem tem cabeçalho identificando os campos; e se o sistema funciona razoavelmente em uma tela menor (responsividade básica).
-
-### Critério 4 — Apresentação oral (0,5 ponto)
-
-Este critério avalia se você consegue explicar o que construiu. O avaliador vai fazer perguntas sobre decisões de código — por que usar `redirect()` após o POST, qual a função do `{% extends %}`, como o `WHERE 1=1` funciona, o que acontece se você remover os placeholders `%s`. Você não precisa memorizar o código, mas precisa entender o que cada parte faz. A apresentação dura aproximadamente 5 minutos por aluno.
+**Não haverá conexão com banco de dados nesta entrega.** Os dados serão simulados com listas Python diretamente nas rotas, e os formulários, ao serem enviados, devem redirecionar de volta para a listagem — simulando a execução da operação. Toda a navegação deve funcionar de verdade.
 
 ---
 
-## Parte 2 — Checklist de entrega
+## 🎯 Tema do Sistema
 
-Use este checklist nas 48 horas antes da aula de entrega. Cada item deve estar funcionando antes de você considerar o trabalho pronto.
+Você e seu parceiro (ou você individualmente) escolhem o tema do sistema. Ele deve fazer sentido como um sistema de gestão real, com um contexto de negócio claro. O sistema precisa ter:
 
-### Ambiente e repositório
+- Controle de **usuários** (obrigatório)
+- Ao menos **mais 2 entidades** com páginas de listagem e inserção
 
-O arquivo `.gitignore` existe e inclui `venv/`, `__pycache__/` e `.env`. O `requirements.txt` está atualizado (executar `pip freeze > requirements.txt` antes do commit final). O repositório tem pelo menos 8 commits com mensagens descritivas — uma por aula, no mínimo. O `README.md` descreve o sistema, as tecnologias usadas e os passos para rodar localmente.
+### Exemplos de temas
 
-### Banco de dados
+| Tema | Entidades além de Usuário |
+|------|--------------------------|
+| 🛒 Loja virtual | Produtos, Categorias |
+| 🎬 Catálogo de Filmes e Séries | Filmes/Séries, Gêneros |
+| 📚 Biblioteca Digital | Livros, Autores |
+| ✅ Gestão de Tarefas | Tarefas, Projetos |
+| 🏥 Clínica Médica | Pacientes, Consultas |
+| 🎮 Coleção de Games | Jogos, Plataformas |
+| 🐾 Pet Shop | Animais, Serviços |
+| 🏋️ Academia | Alunos, Planos |
+| 🍕 Cardápio de Restaurante | Pratos, Categorias de Prato |
+| 🚗 Locadora de Veículos | Veículos, Locações |
+| 📦 Controle de Estoque | Produtos, Fornecedores |
+| 🎵 Catálogo Musical | Músicas, Álbuns |
 
-O arquivo `db_setup.py` existe e, quando executado em um ambiente limpo, cria a tabela e insere dados de exemplo. O arquivo `db.py` existe com `execute_query` e `execute_one`. A tabela tem pelo menos 6 colunas de tipos variados. Há pelo menos 5 registros de exemplo no banco.
-
-### Flask e rotas
-
-O `app.py` importa apenas do `db` — nenhuma lógica de banco está misturada com as rotas. Existem rotas para: listagem (`GET /entidade`), detalhe (`GET /entidade/<int:id>`), formulário de criação (`GET /entidade/novo`), processamento de criação (`POST /entidade/novo`), formulário de edição (`GET /entidade/<int:id>/editar`), processamento de edição (`POST /entidade/<int:id>/editar`), e exclusão lógica (`POST /entidade/<int:id>/deletar`). A `secret_key` está definida no `app.py`.
-
-### Templates
-
-O `base.html` existe com navbar, bloco de flash messages e rodapé. Todos os outros templates usam `{% extends 'base.html' %}` e `{% block conteudo %}`. As URLs nos links usam `url_for()` em vez de strings fixas. Os formulários têm `label` com `for` correto e `placeholder` em todos os campos.
-
-### Validação e segurança
-
-Todos os formulários POST têm validação no servidor em Python — não apenas validação HTML. Os erros são exibidos como flash messages `danger`. Em caso de erro, o formulário é re-renderizado com os dados já digitados. Após POST bem-sucedido, há sempre `redirect()` (padrão PRG). Nenhuma query SQL usa f-string ou concatenação — todas usam `%s`.
+Escolha um tema que seja interessante para vocês. Evite repetir exatamente os exemplos de aula.
 
 ---
 
-## Parte 3 — Como escrever o README.md
+## 📐 Estrutura do Projeto
 
-O `README.md` é a porta de entrada do seu repositório. Um README bem escrito demonstra profissionalismo e facilita a avaliação. Ele deve conter no mínimo quatro seções.
+O projeto deve seguir a estrutura de pastas padrão Flask que foi ensinada:
 
-A primeira seção descreve **o sistema**: qual o domínio escolhido (produtos de uma loja, livros de uma biblioteca, clientes de um serviço), o que o sistema faz, e quais entidades ele gerencia. Seja específico — "Sistema de cadastro de livros de uma biblioteca universitária com controle de status (disponível, emprestado, em restauração)" é muito melhor do que "Sistema para gerenciar livros".
-
-A segunda seção lista as **tecnologias**: Python versão utilizada, Flask versão, MySQL versão, Bootstrap versão. Você pode obter as versões com `pip show flask` e `mysql --version`.
-
-A terceira seção explica como **instalar e rodar**: os passos exatos para clonar o repositório, criar e ativar o ambiente virtual, instalar as dependências, criar o banco de dados no MySQL, rodar o `db_setup.py` e iniciar o servidor. Quem nunca viu o projeto deve conseguir rodá-lo seguindo apenas essas instruções.
-
-A quarta seção mostra as **rotas disponíveis**: uma tabela ou lista descrevendo cada rota, o método HTTP e o que ela faz.
-
-```markdown
-# Sistema de Cadastro de Livros
-
-Sistema web desenvolvido com Python/Flask e MySQL para gerenciar o acervo
-de uma biblioteca universitária. Permite cadastrar, listar, editar e
-desativar livros, com controle de status e quantidade em estoque.
-
-## Tecnologias
-
-- Python 3.12
-- Flask 3.0.x
-- MySQL 8.0
-- Bootstrap 5.3
-
-## Como rodar
-
-1. Clone o repositório: `git clone <url>`
-2. Crie o ambiente virtual: `python -m venv venv`
-3. Ative: `venv\Scripts\activate` (Windows)
-4. Instale as dependências: `pip install -r requirements.txt`
-5. Crie o banco no MySQL Workbench: `CREATE DATABASE projeto_web;`
-6. Configure a senha em `db.py` e `db_setup.py`
-7. Execute: `python db_setup.py`
-8. Inicie o servidor: `python app.py`
-9. Acesse: http://localhost:5000
-
-## Rotas
-
-| Método | URL                    | Descrição                     |
-|--------|------------------------|-------------------------------|
-| GET    | /livros                | Lista todos os livros         |
-| GET    | /livros/<id>           | Detalhe de um livro           |
-| GET    | /livros/novo           | Formulário de cadastro        |
-| POST   | /livros/novo           | Processa novo cadastro        |
-| GET    | /livros/<id>/editar    | Formulário de edição          |
-| POST   | /livros/<id>/editar    | Processa edição               |
-| POST   | /livros/<id>/deletar   | Desativa o livro              |
+```
+projeto-t1/
+│
+├── app.py                    ← arquivo principal Flask
+├── requirements.txt          ← dependências do projeto
+├── .gitignore
+│
+├── templates/
+│   ├── base_publica.html     ← base para páginas públicas (login, cadastro, home)
+│   ├── base.html             ← base para páginas após o login (com menu de navegação)
+│   ├── index.html            ← página inicial / sobre o negócio
+│   ├── login.html
+│   ├── cadastro.html         ← cadastro de novo usuário (sem login)
+│   │
+│   ├── usuarios/
+│   │   ├── listar_usuarios.html
+│   │   └── inserir_usuario.html
+│   │
+│   ├── <entidade2>/          ← ex: produtos/, tarefas/, filmes/...
+│   │   ├── listar_entidade2.html
+│   │   └── inserir_entidade2.html
+│   │
+│   ├── <entidade3>/
+│   │   ├── listar_entidade3.html
+│   │   └── inserir_entidade3.html
+│   │
+│   └── sobre_equipe.html     ← página da equipe de desenvolvimento
+│
+└── static/
+    ├── css/
+    │   └── styles.css        ← CSS personalizado obrigatório
+    ├── js/
+    │   └── scripts.js        ← JavaScript (quando necessário)
+    └── imgs/
+        └── ...               ← imagens do sistema e fotos da equipe
 ```
 
 ---
 
-## Parte 4 — Erros comuns antes da entrega
+## 🗺️ Padrão de Rotas
 
-Alguns problemas aparecem com frequência nos trabalhos entregues. Verificar estes pontos pode fazer a diferença de meio ponto.
+Todas as rotas devem seguir o padrão abaixo. O nome da tabela/entidade vai no lugar de `<entidade>`.
 
-O primeiro erro comum é **commits todos feitos no último dia**. O histórico Git deve mostrar commits ao longo das semanas, demonstrando que o trabalho foi feito incrementalmente. Fazer todos os commits em um único dia antes da entrega prejudica o critério de organização e é inconsistente com a narrativa de desenvolvimento semana a semana.
+### Rotas públicas (sem login)
 
-O segundo erro é **senha do MySQL hardcoded como "root" sem senha**, o que significa que `db_setup.py` falha no computador do avaliador. A solução é garantir que `db_setup.py` imprime uma mensagem de erro clara indicando que a senha precisa ser configurada, e que o README instrui o avaliador a fazer isso.
+| Método | URL | Função | Descrição |
+|--------|-----|--------|-----------|
+| GET | `/` | `index()` | Página inicial — sobre o negócio |
+| GET | `/login` | `login()` GET | Exibe formulário de login |
+| POST | `/login` | `login()` POST | Processa login → redireciona para `/usuarios/listar` |
+| GET | `/cadastro` | `cadastro()` GET | Formulário de novo usuário |
+| POST | `/cadastro` | `cadastro()` POST | Processa cadastro → redireciona para `/login` |
+| GET | `/logout` | `logout()` | Encerra sessão → redireciona para `/login` |
 
-O terceiro erro é **templates sem `{% extends 'base.html' %}`**, resultando em páginas sem navbar e sem consistência visual. Cada template (exceto o próprio `base.html`) deve começar com essa declaração.
+### Rotas protegidas (após login)
 
-O quarto erro é **validação apenas no HTML** (atributos `required`, `type="email"`, etc.) sem validação no Python. Como explicado na Aula 04, validação apenas do lado do cliente não conta como validação no servidor para fins de avaliação.
+| Método | URL | Função | Descrição |
+|--------|-----|--------|-----------|
+| GET | `/<entidade>/listar` | `listar_<entidade>()` | Lista os registros |
+| GET | `/<entidade>/inserir` | `inserir_<entidade>()` GET | Exibe formulário de inserção |
+| POST | `/<entidade>/inserir` | `inserir_<entidade>()` POST | Valida campos e redireciona para `/<entidade>/listar` |
+| GET | `/equipe` | `equipe()` | Página sobre a equipe de desenvolvimento |
 
-O quinto erro é **queries SQL com f-strings** como `f"SELECT * FROM produto WHERE id={id}"`. Mesmo que funcione no seu ambiente, isso é considerado uma falha grave de segurança e impacta o critério de código.
+### Exemplo concreto com usuários e produtos
+
+```
+GET  /usuarios/listar
+GET  /usuarios/inserir
+POST /usuarios/inserir      → valida campos obrigatórios → redireciona para /usuarios/listar
+
+GET  /produtos/listar
+GET  /produtos/inserir
+POST /produtos/inserir      → valida campos obrigatórios → redireciona para /produtos/listar
+```
 
 ---
 
-## Parte 5 — Preparação para a apresentação
+## 📄 Páginas obrigatórias e o que deve ter em cada uma
 
-A apresentação dura aproximadamente 5 minutos por aluno. O professor vai pedir para você demonstrar o sistema funcionando e depois fazer entre 3 e 5 perguntas técnicas. Não é uma prova oral, mas é uma verificação de que você entende o que construiu.
+### Página Inicial (`/`)
 
-As perguntas mais frequentes são sobre os seguintes temas. Por que usamos `redirect()` após um POST bem-sucedido em vez de `render_template()`? O que aconteceria se não houvesse `redirect()`? Qual é a função do `{% block conteudo %}` no `base.html` e do `{% extends %}` no template filho? Como o `WHERE 1=1` permite adicionar filtros dinâmicos? O que é SQL Injection e como os placeholders `%s` protegem contra isso? Por que a exclusão é feita via POST e não via um link GET?
+A página inicial é a vitrine do negócio — ela deve apresentar o sistema para quem ainda não está logado. Pense nela como o site institucional da empresa ou serviço. Deve conter:
 
-Para se preparar, abra cada arquivo do projeto e tente explicar em voz alta o que cada função faz e por que cada decisão foi tomada dessa forma. Se você consegue explicar para si mesmo, consegue explicar para o professor.
+- Nome do sistema e do negócio
+- Descrição do que o sistema faz e para quem serve
+- Seção com as principais funcionalidades (cards, ícones, lista visual)
+- Botões de acesso ao login e cadastro
+- Footer com o nome dos desenvolvedores
+
+> Exemplo: um sistema de locadora deve apresentar o serviço, as vantagens, talvez os planos disponíveis. Um sistema de academia mostra as modalidades. Um catálogo de filmes mostra os gêneros em destaque.
+
+### Página de Login (`/login`)
+
+- Formulário com campos de e-mail e senha
+- Link para a página de cadastro
+- Ao submeter (POST): redireciona para `/usuarios/listar`
+- Deve usar `base_publica.html` (sem o menu de sistema)
+
+### Página de Cadastro (`/cadastro`)
+
+- Formulário de novo usuário com nome, e-mail, senha e confirmação de senha
+- Acessível sem login
+- Ao submeter (POST): redireciona para `/login` com flash de sucesso
+- Deve usar `base_publica.html`
+
+### Template Base pós-login (`base.html`)
+
+Este é o arquivo mais importante da estrutura. **Todas as páginas acessadas após o login devem herdar deste template**, com exceção da página da equipe. Ele deve conter:
+
+- Navbar com o nome/logo do sistema
+- Links de navegação para todas as entidades (Usuários, e as outras 2+)
+- Link para a página da Equipe
+- Botão/link de Logout
+- Bloco `{% block conteudo %}` onde cada página insere seu conteúdo
+- Footer com o nome dos desenvolvedores
+
+### Listagem (`/<entidade>/listar`)
+
+- Título da página com o nome da entidade
+- Botão "Novo" que leva para `/<entidade>/inserir`
+- Tabela Bootstrap com ao menos 4 colunas de dados representativos
+- **Dados simulados com lista Python hardcoded na rota** (mínimo 5 registros)
+- Coluna de Ações com botões de Editar e Excluir visíveis — os botões devem existir na interface, mas não precisam levar a rotas funcionais nesta entrega
+- Deve herdar de `base.html`
+
+### Formulário de Inserção (`/<entidade>/inserir`)
+
+- Formulário com todos os campos relevantes para a entidade
+- Campos com `label`, `placeholder` e tipos adequados (`text`, `email`, `number`, `select`, `textarea`, etc.)
+- Validação dos campos obrigatórios no back-end antes de redirecionar
+- Botões de Salvar e Cancelar (Cancelar volta para a listagem)
+- Ao submeter (POST) com dados válidos: redireciona para a listagem com flash de sucesso
+- Deve herdar de `base.html`
+
+### Página da Equipe (`/equipe`)
+
+Página obrigatória com as informações dos desenvolvedores. Pode ter estrutura, estilos e layout completamente próprios — **não precisa herdar de nenhum template base**. Para cada integrante deve conter:
+
+- **Foto** (pode ser foto real ou avatar gerado da pessoa)
+- **Nome completo**
+- **E-mail institucional ou pessoal**
+- **Mini bio** (2 a 4 frases sobre você, curso, interesses)
 
 ---
 
-## Critérios de avaliação — Tabela resumo
+## 🎨 Requisitos de Interface
 
-| Critério | Peso | O que verifica |
+### CSS personalizado (obrigatório)
+
+O arquivo `static/css/styles.css` deve existir e ter ao menos as seguintes personalizações:
+
+- Estilo do rodapé (footer)
+- Cores ou tipografia alinhadas à identidade visual do negócio escolhido
+
+### Bootstrap
+
+- Navbar responsiva com colapso em telas pequenas (hamburger)
+- Tabelas com classes Bootstrap (`table`, `table-hover`, `table-bordered`)
+- Formulários com `form-control`, `form-label` e `form-select`
+- Cards para a página da equipe e para a página inicial
+- Flash messages estilizadas com alertas Bootstrap
+- Grid responsivo (`col-md-*`) onde aplicável
+
+### JavaScript
+
+Dicas de uso para o JavaScript no projeto:
+
+- Confirmação ao clicar no botão Excluir (via `confirm()` ou modal Bootstrap)
+- Indicador visual de força de senha no cadastro
+- Outro comportamento interativo que enriqueça a experiência
+
+---
+
+## 📋 Checklist de Entrega
+
+Use este checklist antes de submeter. Cada item deve estar funcionando.
+
+### Estrutura e organização
+- [ ] Estrutura de pastas correta (`templates/`, `static/`, subpastas por entidade)
+- [ ] `requirements.txt` atualizado
+- [ ] `.gitignore` com `venv/` e `__pycache__/`
+- [ ] Repositório Git com commits ao longo do desenvolvimento (não tudo de uma vez)
+
+### Templates e herança
+- [ ] `base_publica.html` existe e é usado por login, cadastro e página inicial
+- [ ] `base.html` existe com navbar, menu de navegação e footer
+- [ ] Todas as páginas pós-login (exceto `/equipe`) herdam de `base.html` com `{% extends 'base.html' %}`
+- [ ] Todos os links usam `url_for()`
+
+### Páginas obrigatórias
+- [ ] Página inicial (`/`) sobre o negócio com conteúdo relevante
+- [ ] Página de login com formulário funcional
+- [ ] Página de cadastro de novo usuário sem login
+- [ ] Listagem de usuários com dados simulados (mínimo 5 registros)
+- [ ] Formulário de inserção de usuário
+- [ ] Listagem e formulário de inserção da 2ª entidade
+- [ ] Listagem e formulário de inserção da 3ª entidade
+- [ ] Página da equipe com foto, nome, e-mail e mini bio de cada integrante
+- [ ] Logout funcional redirecionando para login
+
+### Interface
+- [ ] `static/css/styles.css` com regras personalizadas
+- [ ] Navbar responsiva funcionando
+- [ ] Tabelas Bootstrap nas listagens com botões de Editar e Excluir na coluna de Ações
+- [ ] Formulários com `label` e `placeholder` em todos os campos
+- [ ] Footer com nome dos desenvolvedores em todas as páginas (exceto `/equipe`, que tem layout próprio)
+
+### Rotas e navegação
+- [ ] Padrão de URLs seguido (`/<entidade>/listar`, `/<entidade>/inserir`)
+- [ ] POST de inserção valida campos obrigatórios e redireciona para listagem com flash de sucesso
+- [ ] Botão Cancelar nos formulários retorna para a listagem
+
+---
+
+## 📦 Como entregar
+
+1. Certifique-se de que o projeto está no repositório GitHub com histórico de commits
+2. Acesse a **atividade específica do T1 no Google Classroom** da turma
+3. Submeta o **link do repositório GitHub**
+4. **Ambos os integrantes da dupla** devem fazer a entrega individualmente no Classroom
+5. No campo de comentário da entrega, identifique seu parceiro (se for em dupla): `"Dupla com: [Nome do parceiro]"`
+
+> ⚠️ **Atenção:** entregas feitas apenas por um integrante sem identificação do parceiro nos comentários podem resultar em nota zero para o integrante que não entregou.
+
+---
+
+## 📊 Critérios de Avaliação
+
+O T1 vale **2,0 pontos**, distribuídos em quatro critérios. A avaliação será feita na aula seguinte à entrega, com o aluno demonstrando o sistema em funcionamento e respondendo perguntas sobre o código.
+
+| Critério | Peso | O que será verificado |
 |---|---|---|
-| Funcionalidade | 0,5 pt | CRUD completo funcionando sem erros |
-| Código e organização | 0,5 pt | Estrutura, db.py, SQL seguro, commits |
-| Interface | 0,5 pt | Bootstrap consistente, formulários acessíveis |
-| Apresentação oral | 0,5 pt | Entendimento das decisões técnicas |
-| **Total** | **2,0 pt** | |
+| **Funcionalidade e navegação** | 0,5 pt | Login, logout e inserção funcionando com redirecionamentos corretos; formulários validando campos obrigatórios no back-end; nenhuma rota gerando erro 500 |
+| **Templates e herança** | 0,5 pt | `base.html` e `base_publica.html` bem estruturados; herança aplicada corretamente em todas as páginas obrigatórias; flash messages visíveis; links usando `url_for` |
+| **Interface e qualidade visual** | 0,5 pt | Bootstrap aplicado de forma consistente; `styles.css` com personalizações próprias; navbar responsiva; formulários com `label` e `placeholder`; botões de Editar e Excluir presentes nas listagens |
+| **Completude e organização** | 0,5 pt | Todas as páginas exigidas presentes e acessíveis; página da equipe com foto, nome, e-mail e bio de cada integrante; estrutura de pastas correta; commits incrementais no Git |
+
+### O que será testado na apresentação
+
+O aluno deve clonar o repositório, instalar as dependências com `pip install -r requirements.txt` e rodar `python app.py` na maquina da Fatec. A demonstração deve percorrer o seguinte roteiro:
+
+1. Acessar a página inicial e apresentar o conteúdo sobre o negócio
+2. Fazer o cadastro de um novo usuário e verificar o redirecionamento para o login
+3. Fazer login e verificar o redirecionamento para a listagem de usuários
+4. Navegar por todas as entidades usando o menu da navbar
+5. Simular a inserção de um novo registro em cada entidade e verificar o redirecionamento com flash de sucesso
+6. Acessar a página da equipe
+7. Fazer logout e verificar o retorno para a tela de login
+8. Responder perguntas sobre decisões de código feitas pelo professor
 
 ---
 
-## Composição da nota do semestre — Posição do T1
+## ⚠️ Erros comuns que custam pontos
 
-```mermaid
-pie title Composição da Nota Final (10 pontos)
-    "T1 — Trabalho 1 (Aula 08)" : 2
-    "A1 — Avaliação Teórica (Aula 09)" : 3
-    "T2 — Trabalho 2 (Aula 18)" : 2
-    "A2 — Avaliação Teórica (Aula 19)" : 3
+**Todos os commits no último dia** — o Git mostrará isso claramente. Faça commits incrementais ao longo do desenvolvimento.
+
+**Templates pós-login sem `{% extends 'base.html' %}`** — páginas sem navbar ou rodapé são consideradas incompletas.
+
+**Links com URLs hardcoded** — use sempre `url_for('nome_da_funcao')`. `href="{{ url_for('listar_usuarios') }}"` é o padrão correto.
+
+**Formulários sem `label`** — todos os campos devem ter rótulo com o atributo `for` correspondente ao `id` do campo.
+
+**Página da equipe ausente ou incompleta** — foto, nome, e-mail e bio de cada integrante são obrigatórios.
+
+**Apenas um da dupla entregou** — ambos devem submeter no Classroom.
+
+---
+## 📦 Processo de uso do Git e Github pela dupla
+![Git e Github](../imgs/git-github_colaorativo.png)
+
+---
+
+## 🗓️ Composição da Nota do Semestre
+
+```
+Nota Final = T1 + A1 + T2 + A2
 ```
 
-O T1 representa 20% da nota final. Junto com a A1 da próxima aula, as duas primeiras avaliações somam 5 pontos — metade do semestre. A preparação que você faz para o T1 (entender e conseguir explicar o CRUD completo) é diretamente a preparação para a A1.
+| Avaliação | Pontos | Quando |
+|-----------|--------|--------|
+| **T1 — Esta entrega** | 2 pts | Aula 08 |
+| A1 — Avaliação Teórica | 3 pts | Aula 09 |
+| T2 — Validação Final e Deploy | 2 pts | Aula 17 |
+| A2 — Projeto Final | 3 pts | Aula 18 |
+
+O T1 representa 20% da nota final. Aproveite para consolidar tudo que foi aprendido nas primeiras aulas — a preparação para este trabalho é também a preparação para a A1 da próxima aula.
 
 ---
 
-> ⬅️ [Aula anterior: CRUD — Edição e Exclusão](Aula_07_CRUD_Edicao_e_Exclusao.md) | ➡️ [Próxima Aula: Avaliação Teórica A1](Aula_09_Apresentacao_e_Avaliacao_Teorica.md)
+> ⬅️ [Voltar ao README](../README.md) | ➡️ [Próxima Aula: Avaliação Teórica A1](Aula_09_Apresentacao_e_Avaliacao_Teorica.md)
