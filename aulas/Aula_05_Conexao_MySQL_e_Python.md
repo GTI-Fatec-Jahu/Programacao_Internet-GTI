@@ -20,8 +20,6 @@ Quando o servidor Flask é encerrado — seja porque você fechou o terminal, o 
 
 A solução profissional é gravar os dados em um **sistema de armazenamento persistente** que mantém as informações independentemente do estado do servidor. Arquivos de texto são uma opção simples, mas ineficientes para buscas e completamente inadequados para múltiplos usuários simultâneos. A solução correta para sistemas web é o **banco de dados relacional**.
 
-[Ilustração educacional comparando dois painéis lado a lado. Painel esquerdo "Sem banco de dados": servidor Flask representado como bloco laranja com variáveis Python (blocos coloridos) na RAM. Um raio vermelho derruba o servidor e os blocos somem com rótulo "Dados perdidos ao reiniciar". Painel direito "Com MySQL": servidor Flask conectado por seta azul a um cilindro verde rotulado "MySQL — dados persistentes — sobrevivem ao reinício". Fundo branco, flat design educacional, paleta laranja e verde, legendas em português.]
-
 ![Sem banco de dados os dados são voláteis; com MySQL eles persistem mesmo após reiniciar o servidor](../imgs/Aula_05_img_01.png)
 
 ### O que é um banco de dados relacional
@@ -93,10 +91,6 @@ A resposta esperada é algo como `mysql  Ver 8.0.xx for Win64`. Se o comando nã
 ### MySQL Workbench
 
 O **MySQL Workbench** é a ferramenta gráfica oficial para administrar instâncias MySQL. Com ele você cria bancos e tabelas, escreve e executa queries SQL, e visualiza dados em grade sem precisar usar o terminal. Abra o Workbench, clique em **"Local instance MySQL80"** e insira a senha do `root` quando solicitado.
-
-[Captura de tela ilustrativa do MySQL Workbench mostrando a tela inicial com a conexão "Local instance MySQL80" destacada por um retângulo vermelho e seta com rótulo "Clique aqui para conectar". O painel do Workbench ao fundo mostra o Navigator à esquerda com "SCHEMAS" expandido e o editor SQL à direita com a barra de ferramentas. Estilo screenshot educacional realista.]
-
-![MySQL Workbench conectado ao servidor local — interface visual para criar bancos e executar SQL](../imgs/Aula_05_img_02.png)
 
 ### Criando o banco de dados do projeto
 
@@ -243,8 +237,6 @@ python db_setup.py
 
 Você deve ver as mensagens de confirmação. No Workbench, clique com o botão direito em `produto` → **"Select Rows"**: os cinco produtos aparecem. Reinicie o servidor, desligue o computador — os dados continuam lá.
 
-[Captura de tela ilustrativa do MySQL Workbench mostrando o Navigator à esquerda com a árvore "projeto_web > Tables > produto" expandida. À direita, o resultado de SELECT exibido em grade com cinco linhas de produtos mostrando as colunas id, nome, descricao, preco, estoque, ativo, criado_em. Estilo screenshot educacional realista.]
-
 ![Workbench confirmando os dados inseridos pelo script Python — os registros estão persistidos no banco](../imgs/Aula_05_img_03.png)
 
 ---
@@ -318,8 +310,6 @@ def execute_one(sql, params=None):
     resultados = execute_query(sql, params, fetch=True)
     return resultados[0] if resultados else None
 ```
-
-[Diagrama educacional mostrando a arquitetura em camadas do projeto. Três caixas empilhadas verticalmente. Caixa superior "app.py — Rotas / Controllers" com fundo laranja: contém "from db import execute_query" e chamadas de função. Seta para baixo rotulada "importa e chama". Caixa do meio "db.py — Camada de Acesso ao Banco" com fundo azul: contém "execute_query()", "execute_one()", "get_connection()". Seta para baixo rotulada "usa conector". Caixa inferior "MySQL — projeto_web" com fundo verde: cilindro de banco com tabelas. Fundo branco, flat design, setas com rótulos de fluxo de dados, legendas em português.]
 
 ![Arquitetura em camadas: app.py usa db.py que acessa o MySQL — cada camada tem uma responsabilidade clara](../imgs/Aula_05_img_04.png)
 
@@ -408,8 +398,6 @@ cursor.execute(sql)
 
 Variantes mais agressivas usam `'; DROP TABLE usuario; --` para destruir tabelas inteiras com um único envio de formulário.
 
-[Diagrama educacional mostrando SQL Injection em dois caminhos paralelos. Topo: formulário com campo "Usuário" contendo "' OR '1'='1' --". Caminho vermelho à esquerda "Servidor Vulnerável": concatenação direta, query resultante com parte injetada destacada em vermelho, resultado "Login concedido sem senha ⚠️". Caminho verde à direita "Servidor Seguro": placeholder %s, rótulo "dado tratado como texto puro", resultado "Login negado corretamente ✓". Fundo branco, flat design, contraste vermelho e verde, legendas em português.]
-
 ![SQL Injection: concatenação abre brechas devastadoras — placeholders %s eliminam completamente o risco](../imgs/Aula_05_img_05.png)
 
 A solução é simples e inviolável: **sempre use queries parametrizadas com placeholders `%s`**. O conector MySQL trata os valores passados como dados puros — nunca os interpreta como código SQL:
@@ -441,7 +429,7 @@ git push
 
 Hoje você conectou o Python ao mundo da persistência. Instalou e configurou o MySQL, criou o banco `projeto_web` e a tabela principal via script Python com `executemany`. Aprendeu o ciclo de vida de uma conexão (conectar → cursor → executar → commit/fetchall → fechar) e por que o `finally` é essencial. Criou o módulo `db.py` que centraliza a conexão e expõe `execute_query` e `execute_one`, e usou essas funções para substituir os dados estáticos por dados reais do banco. Aprendeu o que é SQL Injection, como funciona e por que placeholders `%s` eliminam completamente o risco.
 
-[Mapa mental educacional com "Aula 05" no centro em círculo verde escuro. Quatro ramos. Ramo azul "MySQL": "Community Server + Workbench", "Criar banco com utf8mb4", "Tipos: VARCHAR, TEXT, DECIMAL, TINYINT". Ramo verde "SQL Básico": "CREATE TABLE com tipos e constraints", "INSERT INTO com executemany", "SELECT com WHERE, ORDER BY, LIKE", "UPDATE e DELETE com WHERE". Ramo laranja "Python + MySQL": "pip install mysql-connector-python", "connect() → cursor() → execute()", "fetchall() / commit() / rollback()", "db.py centralizado". Ramo vermelho "Segurança": "SQL Injection: nunca concatenar", "Usar %s placeholders sempre", "Dados do usuário nunca viram código SQL". Fundo branco, flat design, ícones em cada ramo, legendas em português.]
+[]
 
 ![Mapa mental da Aula 05: MySQL, SQL básico, conexão Python e segurança contra SQL Injection](../imgs/Aula_05_img_06.png)
 
