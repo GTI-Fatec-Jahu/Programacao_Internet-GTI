@@ -130,18 +130,203 @@ Toda operação com banco de dados em Python segue o mesmo ciclo de cinco etapas
 
 ```mermaid
 flowchart LR
-    A["1️⃣ Conectar\nconnect(host, user, pwd, db)"] --> B["2️⃣ Obter Cursor\nconn.cursor()"]
-    B --> C["3️⃣ Executar SQL\ncursor.execute(sql, params)"]
-    C --> D{"SELECT\nou escrita?"}
-    D -->|"SELECT"| E["4️⃣ Ler\nfetchall()"]
-    D -->|"INSERT/UPDATE/DELETE"| F["4️⃣ Confirmar\nconn.commit()"]
-    E --> G["5️⃣ Fechar\ncursor.close() + conn.close()"]
+    A["1️⃣ Conectar
+    connect(host, user, pwd, db)"] --> B["2️⃣ Obter Cursor
+    conn.cursor()"]
+    B --> C["3️⃣ Executar SQL
+    cursor.execute(sql, params)"]
+    C --> D{"SELECT
+    ou escrita?"}
+    D -->|"SELECT"| E["4️⃣ Ler
+    fetchall()"]
+    D -->|"INSERT/UPDATE/DELETE"| F["4️⃣ Confirmar
+    conn.commit()"]
+    E --> G["5️⃣ Fechar
+    cursor.close() + conn.close()"]
     F --> G
     style A fill:#4A90D9,color:#fff
     style G fill:#E74C3C,color:#fff
 ```
 
 O **cursor** é o objeto que executa as queries SQL — pense nele como um ponteiro que navega pelos resultados de um `SELECT` ou confirma a execução de um `INSERT`. Sempre abra o cursor, use-o, e feche tanto o cursor quanto a conexão, preferencialmente usando `try/finally` para garantir o fechamento mesmo em caso de erro.
+
+---
+
+### Parâmetros importantes do MySQL Connector
+
+O `mysql-connector-python` aceita muito mais do que `host`, `user`, `password` e `database`. Entender os parâmetros abaixo é essencial para conexões robustas, corretas e seguras — do desenvolvimento local até a nuvem.
+
+#### `sql_mode` — Modo de validação SQL
+
+O MySQL pode operar em diferentes níveis de rigor na validação dos dados. Sem o modo estrito, ele aceita silenciosamente datas inválidas (`0000-00-00`), trunca textos longos sem aviso e arredonda decimais sem gerar erro. Com o modo estrito, qualquer dado inválido causa um erro explícito, forçando o código a tratar os problemas na origem:
+
+```python
+'sql_mode': (
+    'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,'
+    'ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'
+)
+```
+
+Cada flag ativa uma regra independente:
+
+| Flag | O que faz sem ela | O que faz com ela |
+|---|---|---|
+| `STRICT_TRANS_TABLES` | Dados inválidos são corrigidos silenciosamente (VARCHAR truncado, DECIMAL arredondado, NOT NULL vira `0`) | Qualquer dado inválido gera erro e aborta o INSERT/UPDATE — é a flag mais importante |
+| `NO_ZERO_IN_DATE` | Aceita datas com mês ou dia zero, como `2026-00-15` ou `2026-04-00` | Rejeita datas com mês ou dia zerado, que são malformadas e causam bugs difíceis de rastrear |
+| `NO_ZERO_DATE` | Aceita `0000-00-00` como data válida (valor "vazio" legado do MySQL antigo) | Rejeita `0000-00-00` — datas devem ser reais ou `NULL` |
+| `ERROR_FOR_DIVISION_BY_ZERO` | Uma divisão por zero em SQL (`10 / 0`) retorna `NULL` silenciosamente | Uma divisão por zero gera erro — torna o bug visível em vez de propagar `NULL` pelo sistema |
+| `NO_ENGINE_SUBSTITUTION` | Se o storage engine pedido não existir, o MySQL troca por outro sem avisar | Se o engine não existir, gera erro — evita criar tabelas com engine diferente do esperado sem perceber |
+
+O MySQL 8.0 já usa modo estrito por padrão no servidor, mas declarar explicitamente garante comportamento idêntico independentemente da versão do servidor ou da configuração da máquina de produção.
+
+#### `time_zone` — Fuso horário da sessão
+
+Controla o fuso horário que o MySQL usa em funções como `NOW()` e `CURRENT_TIMESTAMP`, e em colunas `DATETIME` e `TIMESTAMP`. Sem configurar, o servidor usa o fuso do sistema operacional — o que causa inconsistências em servidores em nuvem (geralmente UTC) versus máquinas de desenvolvimento (horário local):
+
+```python
+'time_zone': '-03:00'   # Horário de Brasília (BRT, sem horário de verão)
+# ou
+'time_zone': '+00:00'   # UTC — recomendado para produção e ambientes em nuvem
+```
+
+> **Regra prática:** Use `'+00:00'` em produção e armazene tudo em UTC. Converta para o fuso do usuário apenas na camada de interface.
+
+#### `use_pure` — Python puro vs extensão C
+
+O conector tem dois modos internos: a extensão C (mais rápida, padrão quando instalada) e a implementação em Python puro (mais compatível). Normalmente o conector escolhe automaticamente.
+
+**Porém:** se você configurou tudo corretamente, a conexão funciona perfeitamente no Workbench, mas o código Python continua falhando com erros como `Authentication plugin 'caching_sha2_password' is not supported` ou `Lost connection to MySQL server`, a causa provável é uma **incompatibilidade entre a extensão C instalada e a versão do MySQL Server**. Nesses casos, forçar `use_pure=True` resolve o problema:
+
+```python
+'use_pure': True   # força a implementação em Python puro
+```
+
+O desempenho com `use_pure=True` é ligeiramente menor que a extensão C, mas a diferença é irrelevante para aplicações de pequeno e médio porte. É preferível ter a conexão funcionando de forma confiável a otimizar algo que nem está funcionando.
+
+#### Tratamento de Falhas e Tempo
+
+```python
+'connection_timeout': 10,    # segundos para desistir de uma conexão que não responde
+'autocommit':         False,  # False = exige commit() explícito (recomendado)
+```
+
+Sem `connection_timeout`, um servidor MySQL lento ou inacessível deixa a aplicação travada indefinidamente aguardando resposta. Com `10` segundos, o código recebe um erro em tempo razoável e pode apresentar uma mensagem amigável ao usuário em vez de congelar.
+
+`autocommit=False` (padrão) significa que toda operação de escrita (`INSERT`, `UPDATE`, `DELETE`) precisa de um `commit()` explícito para ser efetivada no banco. Isso dá controle preciso sobre transações: se uma etapa de uma operação composta falhar, você pode chamar `rollback()` e desfazer tudo que havia sido escrito até ali.
+
+#### Pool de Conexões — Essencial para Aplicações Web
+
+Em uma aplicação web, cada requisição HTTP que acessa o banco precisa de uma conexão. Sem pool, cada requisição abre uma nova conexão TCP com o MySQL (alguns milissegundos de handshake e autenticação) e a fecha ao terminar. Com 50 usuários simultâneos, isso representa 50 pares de abertura/fechamento por segundo — um desperdício crescente de recursos do servidor.
+
+Um **pool de conexões** cria um conjunto fixo de conexões antecipadamente e as **reutiliza** entre as requisições. Quando uma requisição termina, a conexão volta ao pool em vez de ser fisicamente fechada:
+
+```mermaid
+graph LR
+    A["Req. 1"] --> P["Pool
+    5 conexões abertas"]
+    B["Req. 2"] --> P
+    C["Req. 3"] --> P
+    D["Req. 4
+    (aguarda liberação)"] -.-> P
+    P --> M["🗄️ MySQL"]
+    style P fill:#F5A623,color:#fff,stroke:#C07D0F
+    style M fill:#27AE60,color:#fff,stroke:#1A7A43
+```
+
+```python
+'pool_name':          'webapp_pool',  # nome identificador do pool
+'pool_size':          5,              # conexões abertas permanentemente (típico: 3–10)
+'pool_reset_session': True,           # limpa variáveis de sessão ao reutilizar conexão
+```
+
+> **Atenção:** `pool_size` define o máximo de conexões simultâneas ao banco. Se todas estiverem ocupadas e uma nova requisição chegar, ela aguarda uma ser liberada. Aumentar `pool_size` indefinidamente consome memória e conexões no servidor MySQL. Para a maioria das aplicações web de pequeno a médio porte, `5` é suficiente.
+
+> **Como o pool funciona com `conn.close()`:** quando você chama `conn.close()` em uma conexão do pool, ela **não é fisicamente fechada** — é devolvida ao pool para reutilização. O código de fechamento permanece idêntico; o pool gerencia o ciclo de vida por baixo dos panos.
+
+#### Segurança — SSL/TLS
+
+Em produção, especialmente com banco em servidor remoto, a conexão deve ser criptografada para evitar que credenciais e dados trafeguem em texto claro pela rede:
+
+```python
+'ssl_disabled':    False,                        # False = usa SSL quando disponível
+'ssl_verify_cert': True,                         # verifica o certificado do servidor
+'ssl_ca':          '/caminho/para/ca-cert.pem',  # certificado da autoridade certificadora
+```
+
+Para desenvolvimento local, SSL é opcional (banco e aplicação estão na mesma máquina). Para qualquer ambiente de produção ou banco em nuvem, SSL deve ser **obrigatório**.
+
+---
+
+### Exemplo completo com todos os parâmetros — Azure Database for MySQL
+
+> **Este exemplo não é testável em aula** — depende de um recurso provisionado na nuvem Microsoft Azure. Serve como referência de como seria uma conexão de produção real com todos os parâmetros configurados corretamente.
+
+O Azure Database for MySQL é um serviço de banco de dados gerenciado. Ele exige SSL, usa credenciais no formato `usuario@servidor`, e tipicamente opera em UTC. Este é o exemplo de uma configuração completa para esse ambiente:
+
+```python
+# conexao_azure.py — Exemplo de referência (não testável localmente)
+# Demonstra como todos os parâmetros se combinam em um cenário de produção real.
+
+import mysql.connector
+from mysql.connector import Error, pooling
+
+AZURE_CONFIG = {
+    # ── Identificação do servidor ─────────────────────────────────────
+    'host':     'meu-servidor.mysql.database.azure.com',
+    'port':     3306,
+    'user':     'adminuser@meu-servidor',   # formato obrigatório no Azure
+    'password': 'SenhaForte@2026!',
+    'database': 'projeto_web',
+
+    # ── Codificação ───────────────────────────────────────────────────
+    'charset':  'utf8mb4',
+
+    # ── Comportamento SQL ─────────────────────────────────────────────
+    'sql_mode': (
+        'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,'
+        'ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'
+    ),
+    'time_zone':   '+00:00',   # UTC — padrão recomendado para nuvem
+
+    # ── Compatibilidade ───────────────────────────────────────────────
+    'use_pure':    True,       # recomendado em ambientes de nuvem
+
+    # ── Tempo e falhas ────────────────────────────────────────────────
+    'connection_timeout': 30,  # nuvem pode ter latência maior que local
+    'autocommit':         False,
+
+    # ── SSL (obrigatório no Azure) ────────────────────────────────────
+    'ssl_disabled':    False,
+    'ssl_verify_cert': True,
+    'ssl_ca':          'DigiCertGlobalRootG2.crt.pem',  # baixado do portal Azure
+}
+
+# Pool para uso em produção — mais conexões para suportar maior tráfego
+pool = pooling.MySQLConnectionPool(
+    pool_name='azure_pool',
+    pool_size=10,
+    pool_reset_session=True,
+    **AZURE_CONFIG
+)
+
+try:
+    conn = pool.get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute('SELECT VERSION() AS versao')
+    resultado = cursor.fetchone()
+    print(f"Conectado ao Azure MySQL: {resultado['versao']}")
+except Error as e:
+    print(f'Erro ao conectar ao Azure: {e}')
+finally:
+    if 'cursor' in locals():
+        cursor.close()
+    if 'conn' in locals():
+        conn.close()   # devolve ao pool, não fecha fisicamente
+```
+
+A estrutura do código é idêntica à conexão local — o que muda são os parâmetros de configuração. Essa é exatamente a vantagem de centralizar tudo no `db.py`: para migrar do ambiente local para o Azure, você altera apenas o dicionário de configuração, sem tocar em nenhuma rota do `app.py`.
+
+---
 
 ### Exemplo prático 1 — Script de setup do banco
 
@@ -156,11 +341,17 @@ import mysql.connector
 from mysql.connector import Error
 
 CONFIGURACAO = {
-    'host':     'localhost',
-    'user':     'root',
-    'password': 'SUA_SENHA_AQUI',  # substitua pela sua senha do MySQL
-    'database': 'projeto_web',
-    'charset':  'utf8mb4'
+    'host':               'localhost',
+    'user':               'root',
+    'password':           'SUA_SENHA_AQUI',  # substitua pela sua senha do MySQL
+    'database':           'projeto_web',
+    'charset':            'utf8mb4',
+    'sql_mode':           ('STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,'
+                           'ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'),
+    'time_zone':          '-03:00',   # Horário de Brasília
+    'use_pure':           True,       # Python puro — compatível com todos os ambientes
+    'connection_timeout': 10,         # desiste após 10s sem resposta
+    'autocommit':         False,      # exige commit() explícito
 }
 
 try:
@@ -250,23 +441,39 @@ Se as credenciais e a lógica de conexão estivessem repetidas em cada rota do `
 # Qualquer arquivo que precise do banco importa apenas este módulo
 
 import mysql.connector
-from mysql.connector import Error
+from mysql.connector import Error, pooling
 
-DB_CONFIG = {
-    'host':     'localhost',
-    'user':     'root',
-    'password': 'SUA_SENHA_AQUI',
-    'database': 'projeto_web',
-    'charset':  'utf8mb4'
+# Parâmetros de conexão — editados apenas aqui, usados em todo o sistema
+_DB_PARAMS = {
+    'host':               'localhost',
+    'user':               'root',
+    'password':           'SUA_SENHA_AQUI',
+    'database':           'projeto_web',
+    'charset':            'utf8mb4',
+    'sql_mode':           ('STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,'
+                           'ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'),
+    'time_zone':          '-03:00',   # Horário de Brasília
+    'use_pure':           True,       # Python puro — compatível com todos os ambientes
+    'connection_timeout': 10,         # desiste após 10s sem resposta
+    'autocommit':         False,      # exige commit() explícito
 }
+
+# Pool criado uma única vez quando o módulo é carregado pela primeira vez.
+# conn.close() devolve a conexão ao pool — não fecha fisicamente.
+_pool = pooling.MySQLConnectionPool(
+    pool_name='webapp_pool',
+    pool_size=5,           # conexões abertas permanentemente
+    pool_reset_session=True,
+    **_DB_PARAMS
+)
 
 
 def get_connection():
-    """Retorna uma conexão ativa com o banco. Levanta Exception em caso de falha."""
+    """Retorna uma conexão do pool. Levanta Exception em caso de falha."""
     try:
-        return mysql.connector.connect(**DB_CONFIG)
+        return _pool.get_connection()
     except Error as e:
-        raise Exception(f'Não foi possível conectar ao banco: {e}')
+        raise Exception(f'Não foi possível obter conexão do pool: {e}')
 
 
 def execute_query(sql, params=None, fetch=False):
@@ -299,7 +506,7 @@ def execute_query(sql, params=None, fetch=False):
         raise Exception(f'Erro ao executar query: {e}')
     finally:
         cursor.close()
-        conn.close()
+        conn.close()   # devolve ao pool, não fecha fisicamente
 
 
 def execute_one(sql, params=None):
@@ -427,7 +634,13 @@ git push
 
 ## Resumo da Aula
 
-Hoje você conectou o Python ao mundo da persistência. Instalou e configurou o MySQL, criou o banco `projeto_web` e a tabela principal via script Python com `executemany`. Aprendeu o ciclo de vida de uma conexão (conectar → cursor → executar → commit/fetchall → fechar) e por que o `finally` é essencial. Criou o módulo `db.py` que centraliza a conexão e expõe `execute_query` e `execute_one`, e usou essas funções para substituir os dados estáticos por dados reais do banco. Aprendeu o que é SQL Injection, como funciona e por que placeholders `%s` eliminam completamente o risco.
+Hoje você conectou o Python ao mundo da persistência. Instalou e configurou o MySQL, criou o banco `projeto_web` e a tabela principal via script Python com `executemany`. Aprendeu o ciclo de vida de uma conexão (conectar → cursor → executar → commit/fetchall → fechar) e por que o `finally` é essencial.
+
+Conheceu os parâmetros avançados do conector: `sql_mode` (valida os dados com rigor), `time_zone` (garante consistência de datas entre ambientes), `use_pure` (Python puro resolve incompatibilidades de autenticação quando tudo parece correto mas a conexão falha), `connection_timeout` (evita travamentos por servidor inacessível) e `autocommit=False` (exige `commit()` explícito para controle de transações).
+
+Configurou um **pool de conexões** no `db.py` com `MySQLConnectionPool` — fundamental para aplicações web, onde reutilizar conexões existentes é muito mais eficiente do que abrir e fechar uma por requisição. Viu como esse mesmo padrão se aplica a bancos em nuvem, como o Azure Database for MySQL, com a adição de SSL e parâmetros específicos do ambiente.
+
+Criou o módulo `db.py` que centraliza tudo e expõe `execute_query` e `execute_one`, substituindo os dados estáticos por dados reais do banco. Aprendeu o que é SQL Injection, como funciona e por que placeholders `%s` eliminam completamente o risco.
 
 []
 
